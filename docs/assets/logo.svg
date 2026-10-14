@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-labelledby="t"><title id="t">3D Website Boilerplate Designer logo</title>
+<rect width="512" height="512" rx="112" fill="#0E1B18"/>
+<rect x="10" y="10" width="492" height="492" rx="102" fill="none" stroke="#16302A" stroke-width="4"/>
+<path d="M76.9,341.7 A196,66 -24 0 1 435.1,182.3" fill="none" stroke="#FFB547" stroke-width="9" stroke-linecap="round" opacity="0.45"/>
+<polygon points="159.0,206.0 256.0,262.0 256.0,374.0 159.0,318.0" fill="#1F7D5C"/>
+<polygon points="256.0,262.0 353.0,206.0 353.0,318.0 256.0,374.0" fill="#3DB88A"/>
+<polygon points="256.0,150.0 353.0,206.0 256.0,262.0 159.0,206.0" fill="#0E1B18" fill-opacity="1"/>
+<g stroke="#8FF0C8" stroke-width="5" stroke-linecap="round"><line x1="223.7" y1="168.7" x2="320.7" y2="224.7"/><line x1="288.3" y1="168.7" x2="191.3" y2="224.7"/><line x1="191.3" y1="187.3" x2="288.3" y2="243.3"/><line x1="320.7" y1="187.3" x2="223.7" y2="243.3"/></g>
+<polygon points="256.0,150.0 353.0,206.0 256.0,262.0 159.0,206.0" fill="none" stroke="#8FF0C8" stroke-width="9" stroke-linejoin="round"/>
+<polyline points="159.0,206.0 159.0,318.0 256.0,374.0 353.0,318.0 353.0,206.0" fill="none" stroke="#8FF0C8" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="256.0,262.0 256.0,374.0" fill="none" stroke="#8FF0C8" stroke-width="9" stroke-linecap="round"/>
+<path d="M76.9,341.7 A196,66 -24 0 0 435.1,182.3" fill="none" stroke="#FFB547" stroke-width="9" stroke-linecap="round"/>
+<circle cx="175.3" cy="357.1" r="19" fill="#FFB547"/>
+</svg>
