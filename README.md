@@ -20,7 +20,7 @@ After the project exists, the skill walks you through the customization work tha
 
 ## Quick start
 
-1. Install the skill from its Agensi listing into your agent's skills folder. For Claude Code that is `~/.claude/skills/` for all projects, or `.claude/skills/` inside one project. Other agents use their own skills folder.
+1. Install the skill from its [Agensi listing](https://www.agensi.io/skills/3d-website-boilerplate-designer) into your agent's skills folder. For Claude Code that is `~/.claude/skills/` for all projects, or `.claude/skills/` inside one project. Other agents use their own skills folder.
 2. Ask for what you want in plain language, for example:
    > Build me a 3D landing page with a product I can rotate and recolor.
 3. The skill confirms the stack and pattern, scaffolds the project, and runs it:
