@@ -104,3 +104,6 @@ The skill supplies working defaults, and the following stay yours to choose:
 **The scaffold command says the folder is not empty.** It refuses to overwrite by default. Pick a new folder or pass `--force`.
 
 **Is this for 2D page layout or typography?** No. If the request is about layout, type or non-3D interface work, this skill is not the right tool.
+
+
+[Click here to collect the skill](https://www.agensi.io/skills/3d-website-boilerplate-designer)
