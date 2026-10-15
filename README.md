@@ -8,6 +8,10 @@
   An agent skill that scaffolds working 3D websites with Three.js or React Three Fiber, then helps you customize them, load real assets, and make them run well on phones.
 </p>
 
+<p align="right">
+  [Click! This is an example](marren-chair-configurator.html)
+</p>
+
 ---
 
 ## What it does
