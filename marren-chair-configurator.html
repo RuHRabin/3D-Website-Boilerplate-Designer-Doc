@@ -1,0 +1,765 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Marren Chair Configurator</title>
+</head>
+<body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: full-height workshop bench. A 3D stage on the left, a build panel with a pinned price bar on the right.
+   Under 860px the stage sticks to the top and the panel scrolls beneath it. */
+:root {
+  --bg: #E4E8E2;
+  --panel: #F3F5F0;
+  --ink: #141C18;
+  --mute: #55615A;
+  --line: #C9D0C7;
+  --chip: #E6EAE3;
+  --accent: #2446C9;
+  --accent-ink: #FFFFFF;
+  --stage-hi: #F7F9F4;
+  --stage-lo: #CBD3C8;
+  --warn: #A4400F;
+  --good: #1F6B43;
+  --f-display: 'Bricolage Grotesque', system-ui, sans-serif;
+  --f-body: 'IBM Plex Sans', system-ui, sans-serif;
+  --f-mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0D110F; --panel: #151A17; --ink: #E9EEE7; --mute: #98A49C; --line: #2A332E; --chip: #1E2521;
+    --accent: #8CA2FF; --accent-ink: #0B1230; --stage-hi: #29322D; --stage-lo: #0E1310;
+    --warn: #F0A06A; --good: #7BD3A0; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0D110F; --panel: #151A17; --ink: #E9EEE7; --mute: #98A49C; --line: #2A332E; --chip: #1E2521;
+  --accent: #8CA2FF; --accent-ink: #0B1230; --stage-hi: #29322D; --stage-lo: #0E1310;
+  --warn: #F0A06A; --good: #7BD3A0; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 14px; line-height: 1.45; }
+button, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.app { height: 100%; display: grid; grid-template-columns: minmax(0, 1fr) 420px; grid-template-rows: auto minmax(0, 1fr); }
+.top { grid-column: 1 / -1; display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 12px 20px; border-bottom: 1px solid var(--line); }
+.brand { font-family: var(--f-display); font-weight: 700; font-size: 18px; letter-spacing: -0.01em; }
+.brand span { font-weight: 500; color: var(--mute); margin-left: 8px; }
+.lead { font-family: var(--f-mono); font-size: 12px; color: var(--mute); text-align: right; }
+.lead b { color: var(--ink); font-weight: 500; }
+
+/* Stage */
+.stage { position: relative; min-width: 0; min-height: 0; overflow: hidden;
+  background: radial-gradient(120% 90% at 50% 38%, var(--stage-hi), var(--stage-lo)); }
+.stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+.stage canvas:active { cursor: grabbing; }
+.stage-tag { position: absolute; left: 20px; top: 16px; font-family: var(--f-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute); pointer-events: none; }
+.dims { position: absolute; left: 20px; bottom: 16px; display: flex; flex-wrap: wrap; gap: 6px 14px; font-family: var(--f-mono); font-size: 12px; color: var(--mute); pointer-events: none; max-width: calc(100% - 40px); }
+.dims b { color: var(--ink); font-weight: 500; }
+.views { position: absolute; right: 16px; bottom: 12px; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; max-width: calc(100% - 32px); }
+.views button { border: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 86%, transparent); border-radius: 6px; padding: 5px 10px; font-size: 12px; backdrop-filter: blur(6px); }
+.views button:hover { border-color: var(--ink); }
+.views button[aria-pressed="true"] { background: var(--ink); color: var(--panel); border-color: var(--ink); }
+.fallback { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; gap: 6px; padding: 24px; color: var(--mute); }
+.fallback strong { color: var(--ink); font-family: var(--f-display); font-size: 18px; }
+
+/* Panel */
+.panel { display: flex; flex-direction: column; min-height: 0; background: var(--panel); border-left: 1px solid var(--line); }
+.tabs { display: flex; gap: 4px; padding: 10px 16px 0; border-bottom: 1px solid var(--line); }
+.tab { background: none; border: 0; border-bottom: 2px solid transparent; padding: 8px 10px 10px; font-weight: 500; color: var(--mute); }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.tab .count { font-family: var(--f-mono); font-size: 11px; margin-left: 4px; color: var(--mute); }
+.panes { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 16px 20px; }
+.pane[hidden] { display: none; }
+.grp { padding: 14px 0; border-bottom: 1px solid var(--line); display: grid; gap: 10px; }
+.grp:last-child { border-bottom: 0; }
+.lbl { margin: 0; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+.lbl .val { font-family: var(--f-mono); font-size: 12px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--mute); text-align: right; }
+.seg { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px; }
+.seg-btn { border: 1px solid var(--line); background: var(--chip); border-radius: 6px; padding: 8px 10px; text-align: left; display: grid; gap: 1px; min-width: 0; }
+.seg-btn:hover { border-color: var(--mute); }
+.seg-btn[aria-pressed="true"] { border-color: var(--accent); background: var(--panel); box-shadow: inset 0 0 0 1px var(--accent); }
+.seg-btn .n { font-weight: 500; }
+.seg-btn .d { font-family: var(--f-mono); font-size: 11px; color: var(--mute); }
+.swatches { display: flex; flex-wrap: wrap; gap: 10px; }
+.sw { width: 40px; height: 40px; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--ink) 25%, transparent); padding: 0; position: relative; }
+.sw[aria-pressed="true"] { outline: 2px solid var(--accent); outline-offset: 3px; }
+.sw:hover { transform: translateY(-1px); }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+.slider { display: grid; gap: 4px; }
+.slider .lbl { text-transform: none; letter-spacing: 0; font-weight: 500; font-size: 13px; }
+.qty { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--chip); }
+.qty button { width: 38px; height: 36px; border: 0; background: none; font-size: 18px; }
+.qty button:hover { background: var(--line); }
+.qty output { min-width: 40px; text-align: center; font-family: var(--f-mono); }
+.note { color: var(--mute); font-size: 12px; margin: 0; }
+.btn { border: 1px solid var(--line); background: var(--chip); border-radius: 6px; padding: 8px 12px; font-weight: 500; }
+.btn:hover { border-color: var(--ink); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.danger { color: var(--warn); border-color: var(--warn); }
+.btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.field { width: 100%; border: 1px solid var(--line); background: var(--chip); border-radius: 6px; padding: 8px 10px; }
+textarea.field { font-family: var(--f-mono); font-size: 12px; resize: vertical; min-height: 64px; }
+.err { color: var(--warn); font-size: 12px; margin: 0; min-height: 1em; }
+
+.saved { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.saved li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; border: 1px solid var(--line); border-radius: 8px; padding: 10px; background: var(--chip); }
+.dots { display: flex; }
+.dots i { width: 18px; height: 18px; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--ink) 25%, transparent); }
+.dots i + i { margin-left: -6px; }
+.saved .nm { font-weight: 500; overflow-wrap: anywhere; }
+.saved .meta { font-family: var(--f-mono); font-size: 11px; color: var(--mute); }
+.saved .acts { display: flex; gap: 6px; }
+.saved .acts .btn { padding: 5px 9px; font-size: 12px; }
+.empty { border: 1px dashed var(--line); border-radius: 8px; padding: 18px; color: var(--mute); text-align: center; }
+
+.buy { border-top: 1px solid var(--line); background: var(--panel); padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.price { font-family: var(--f-display); font-weight: 700; font-size: 30px; letter-spacing: -0.02em; line-height: 1; font-variant-numeric: tabular-nums; }
+.price-sub { font-family: var(--f-mono); font-size: 11px; color: var(--mute); margin-top: 4px; }
+.buy .btn { padding: 11px 18px; }
+
+/* Order dialog */
+.modal { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 16px; background: color-mix(in srgb, var(--bg) 60%, rgba(0,0,0,.55)); }
+.sheet { width: min(520px, 100%); max-height: 100%; overflow: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px; display: grid; gap: 14px; }
+.sheet h2 { margin: 0; font-family: var(--f-display); font-size: 22px; letter-spacing: -0.01em; }
+.ref { font-family: var(--f-mono); font-size: 12px; color: var(--mute); }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+td { padding: 6px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+td:last-child { text-align: right; font-family: var(--f-mono); white-space: nowrap; padding-left: 12px; }
+tr.sum td { font-weight: 600; }
+tr.total td { font-family: var(--f-display); font-size: 18px; border-bottom: 0; }
+tr.total td:last-child { font-family: var(--f-display); }
+.good { color: var(--good); }
+.toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 20px); opacity: 0; pointer-events: none; background: var(--ink); color: var(--panel); padding: 9px 14px; border-radius: 8px; font-size: 13px; z-index: 30; transition: opacity .2s, transform .2s; }
+.toast.on { opacity: 1; transform: translate(-50%, 0); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+@media (max-width: 860px) {
+  html, body { height: auto; }
+  .app { display: block; height: auto; }
+  .top { padding: 10px 16px; }
+  .stage { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; height: 46vh; min-height: 300px; border-bottom: 1px solid var(--line); }
+  .panel { border-left: 0; min-height: 60vh; }
+  .panes { overflow: visible; padding-inline: 16px; }
+  .buy { position: sticky; bottom: env(safe-area-inset-bottom, 0px); z-index: 6; }
+  .lead { display: none; }
+  .dims { bottom: 50px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast, .sw { transition: none; }
+  .sw:hover { transform: none; }
+}
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">Halden Workshop<span>Marren chair</span></div>
+    <div class="lead">Made to order · ready in <b id="weeks">5 weeks</b></div>
+  </header>
+
+  <section class="stage" id="stage" aria-label="3D preview">
+    <canvas id="gl" role="img" aria-label="3D model of the Marren chair"></canvas>
+    <div class="stage-tag">Drag to orbit · scroll to zoom</div>
+    <div class="dims" id="dims" aria-label="Dimensions"></div>
+    <div class="views" id="views">
+      <button type="button" data-view="three" aria-pressed="true">3/4</button>
+      <button type="button" data-view="front" aria-pressed="false">Front</button>
+      <button type="button" data-view="side" aria-pressed="false">Side</button>
+      <button type="button" data-view="top" aria-pressed="false">Top</button>
+      <button type="button" id="spin" aria-pressed="false">Spin</button>
+    </div>
+    <div class="fallback" id="fallback" hidden>
+      <strong>3D preview unavailable</strong>
+      <span>This browser could not start WebGL. Your choices and pricing still work.</span>
+    </div>
+  </section>
+
+  <aside class="panel">
+    <div class="tabs" role="tablist" aria-label="Configurator sections">
+      <button class="tab" role="tab" id="tab-build" aria-controls="pane-build" aria-selected="true" type="button">Build</button>
+      <button class="tab" role="tab" id="tab-saved" aria-controls="pane-saved" aria-selected="false" type="button" tabindex="-1">Saved<span class="count" id="saved-count">0</span></button>
+      <button class="tab" role="tab" id="tab-share" aria-controls="pane-share" aria-selected="false" type="button" tabindex="-1">Share</button>
+    </div>
+
+    <div class="panes">
+      <div class="pane" id="pane-build" role="tabpanel" aria-labelledby="tab-build">
+        <section class="grp"><h3 class="lbl">Frame wood <span class="val" id="v-wood"></span></h3><div class="swatches" id="g-wood"></div></section>
+        <section class="grp"><h3 class="lbl">Legs <span class="val" id="v-legs"></span></h3><div class="seg" id="g-legs"></div></section>
+        <section class="grp" id="grp-metal"><h3 class="lbl">Metal finish <span class="val" id="v-metal"></span></h3><div class="seg" id="g-metal"></div></section>
+        <section class="grp"><h3 class="lbl">Back <span class="val" id="v-back"></span></h3><div class="seg" id="g-back"></div></section>
+        <section class="grp"><h3 class="lbl">Arms <span class="val" id="v-arms"></span></h3><div class="seg" id="g-arms"></div></section>
+        <section class="grp"><h3 class="lbl">Upholstery <span class="val" id="v-fabric"></span></h3><div class="seg" id="g-fabric"></div></section>
+        <section class="grp"><h3 class="lbl">Colour <span class="val" id="v-color"></span></h3><div class="swatches" id="g-color"></div></section>
+        <section class="grp">
+          <div class="slider"><label class="lbl" for="width">Seat width <span class="val" id="v-width"></span></label><input type="range" id="width" min="44" max="58" step="1"></div>
+          <div class="slider"><label class="lbl" for="seatH">Seat height <span class="val" id="v-seatH"></span></label><input type="range" id="seatH" min="42" max="50" step="1"></div>
+          <p class="note">Widths over 50 cm add $3 per cm. Seat height is free to change.</p>
+        </section>
+        <section class="grp">
+          <div class="row">
+            <div><h3 class="lbl" style="margin-bottom:4px">Quantity</h3><p class="note" id="qty-note"></p></div>
+            <div class="qty"><button type="button" id="qty-dec" aria-label="Fewer chairs">&minus;</button><output id="qty" aria-live="polite">1</output><button type="button" id="qty-inc" aria-label="More chairs">+</button></div>
+          </div>
+          <div class="btns"><button type="button" class="btn" id="rand">Surprise me</button><button type="button" class="btn" id="reset">Reset</button></div>
+        </section>
+      </div>
+
+      <div class="pane" id="pane-saved" role="tabpanel" aria-labelledby="tab-saved" hidden>
+        <section class="grp">
+          <label class="lbl" for="save-name">Save this design</label>
+          <div class="btns" style="flex-wrap:nowrap"><input class="field" id="save-name" maxlength="40" placeholder="Name, for example Dining, walnut"><button type="button" class="btn primary" id="save">Save</button></div>
+        </section>
+        <section class="grp">
+          <h3 class="lbl">Your designs</h3>
+          <ul class="saved" id="saved-list"></ul>
+          <p class="note">Saved designs stay in this browser only. Use Share to move one to another device.</p>
+        </section>
+      </div>
+
+      <div class="pane" id="pane-share" role="tabpanel" aria-labelledby="tab-share" hidden>
+        <section class="grp">
+          <label class="lbl" for="code-out">Design code</label>
+          <textarea class="field" id="code-out" readonly rows="2"></textarea>
+          <div class="btns"><button type="button" class="btn primary" id="copy-code">Copy code</button><button type="button" class="btn" id="copy-spec">Copy spec sheet</button></div>
+          <p class="note">The code describes every choice on this chair. Send it to anyone and they can paste it below.</p>
+        </section>
+        <section class="grp">
+          <label class="lbl" for="code-in">Load a design code</label>
+          <textarea class="field" id="code-in" rows="2" placeholder="MRN1-walnut-tapered-black-spindle-none-wool-moss-52-46-1"></textarea>
+          <div class="btns"><button type="button" class="btn" id="load-code">Load design</button></div>
+          <p class="err" id="code-err" role="alert"></p>
+        </section>
+      </div>
+    </div>
+
+    <footer class="buy">
+      <div><div class="price" id="total" aria-live="polite">$0</div><div class="price-sub" id="price-sub"></div></div>
+      <button type="button" class="btn primary" id="review">Review order</button>
+    </footer>
+  </aside>
+</div>
+
+<div class="modal" id="order" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="order-title">
+    <div><h2 id="order-title">Order summary</h2><div class="ref" id="order-ref"></div></div>
+    <table id="order-table"></table>
+    <p class="note">This page does not take payment or send orders. Copy the summary and send it to the workshop to place the order.</p>
+    <div class="btns"><button type="button" class="btn primary" id="order-copy">Copy summary</button><button type="button" class="btn" id="order-close">Close</button></div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/environments/RoomEnvironment.js"></script>
+<script>
+(function () {
+'use strict';
+var $ = function (s, r) { return (r || document).querySelector(s); };
+var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+
+/* ---------- Catalogue ---------- */
+var OPTS = {
+  wood: [
+    { id: 'oak', name: 'White oak', price: 0, base: '#C8A272', dark: '#9A7440' },
+    { id: 'ash', name: 'Ash', price: 20, base: '#DDCDA9', dark: '#B5A074' },
+    { id: 'walnut', name: 'Walnut', price: 120, base: '#6C4B34', dark: '#40271A' },
+    { id: 'ebony', name: 'Ebonized oak', price: 45, base: '#2B2927', dark: '#121110' }
+  ],
+  legs: [
+    { id: 'tapered', name: 'Tapered', price: 0 },
+    { id: 'hairpin', name: 'Hairpin', price: -20, metal: true },
+    { id: 'sled', name: 'Sled', price: 85, metal: true }
+  ],
+  metal: [
+    { id: 'black', name: 'Matte black', price: 0, color: '#1D1D1D', rough: 0.55, metalness: 0.55 },
+    { id: 'brass', name: 'Brushed brass', price: 30, color: '#C9A24D', rough: 0.38, metalness: 0.95 },
+    { id: 'chrome', name: 'Chrome', price: 15, color: '#DDE0E2', rough: 0.14, metalness: 1 }
+  ],
+  back: [
+    { id: 'slat', name: 'Slat', price: 0 },
+    { id: 'spindle', name: 'Spindle', price: 60 },
+    { id: 'uph', name: 'Upholstered', price: 95 }
+  ],
+  arms: [
+    { id: 'none', name: 'No arms', price: 0 },
+    { id: 'wood', name: 'Wood arms', price: 110 }
+  ],
+  fabric: [
+    { id: 'wool', name: 'Wool', price: 0, rough: 1, kind: 'wool' },
+    { id: 'velvet', name: 'Velvet', price: 70, rough: 0.85, kind: 'velvet' },
+    { id: 'leather', name: 'Leather', price: 240, rough: 0.46, kind: 'leather' }
+  ],
+  color: [
+    { id: 'fog', name: 'Fog', hex: '#B7BDB6' },
+    { id: 'oat', name: 'Oat', hex: '#CBBE9C' },
+    { id: 'moss', name: 'Moss', hex: '#5E6C4A' },
+    { id: 'saffron', name: 'Saffron', hex: '#D6A12A' },
+    { id: 'rust', name: 'Rust', hex: '#A14E2D' },
+    { id: 'plum', name: 'Plum', hex: '#5B3A52' },
+    { id: 'indigo', name: 'Indigo', hex: '#394E8C' },
+    { id: 'charcoal', name: 'Charcoal', hex: '#3A3D3C' }
+  ]
+};
+var BASE_PRICE = 340;
+var DEFAULT = { wood: 'walnut', legs: 'tapered', metal: 'black', back: 'spindle', arms: 'none', fabric: 'wool', color: 'moss', width: 52, seatH: 46, qty: 1 };
+var KEYS = ['wood', 'legs', 'metal', 'back', 'arms', 'fabric', 'color', 'width', 'seatH', 'qty'];
+var STORE = 'halden.marren.v1';
+
+function byId(list, id) { for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i]; return null; }
+function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
+var usdFmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+function usd(n) { return usdFmt.format(n); }
+var usd2 = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+function delta(n) { return (n < 0 ? '−' : '+') + '$' + Math.abs(n); }
+
+function sanitize(o) {
+  if (!o || typeof o !== 'object') return null;
+  var c = {};
+  var lists = ['wood', 'legs', 'metal', 'back', 'arms', 'fabric', 'color'];
+  for (var i = 0; i < lists.length; i++) { if (!byId(OPTS[lists[i]], o[lists[i]])) return null; c[lists[i]] = o[lists[i]]; }
+  var w = Math.round(Number(o.width)), s = Math.round(Number(o.seatH)), q = Math.round(Number(o.qty));
+  if (!isFinite(w) || !isFinite(s) || !isFinite(q)) return null;
+  c.width = clamp(w, 44, 58); c.seatH = clamp(s, 42, 50); c.qty = clamp(q, 1, 24);
+  return c;
+}
+
+/* ---------- Price, lead time, dimensions ---------- */
+function quote(c) {
+  var wood = byId(OPTS.wood, c.wood), legs = byId(OPTS.legs, c.legs), metal = byId(OPTS.metal, c.metal);
+  var back = byId(OPTS.back, c.back), arms = byId(OPTS.arms, c.arms), fab = byId(OPTS.fabric, c.fabric);
+  var lines = [{ label: 'Marren chair, base build', note: 'White oak, tapered legs, slat back, wool', amt: BASE_PRICE }];
+  function add(label, amt) { if (amt) lines.push({ label: label, amt: amt }); }
+  add('Frame: ' + wood.name, wood.price);
+  add('Legs: ' + legs.name, legs.price);
+  if (legs.metal) add('Metal: ' + metal.name, metal.price);
+  add('Back: ' + back.name, back.price);
+  add('Arms: ' + arms.name, arms.price);
+  add('Upholstery: ' + fab.name, fab.price);
+  add('Width ' + c.width + ' cm', Math.max(0, c.width - 50) * 3);
+  var unit = 0; lines.forEach(function (l) { unit += l.amt; });
+  var discPct = c.qty >= 8 ? 10 : c.qty >= 4 ? 5 : 0;
+  var gross = unit * c.qty, disc = Math.round(gross * discPct / 100), sub = gross - disc;
+  var ship = sub >= 1200 ? 0 : 79;
+  var weeks = 5 + (c.wood === 'walnut' ? 1 : 0) + (c.fabric === 'leather' ? 2 : 0) + (c.legs === 'sled' ? 1 : 0) +
+    (c.back === 'uph' ? 1 : 0) + (c.arms === 'wood' ? 1 : 0) + (c.qty >= 8 ? 2 : c.qty >= 4 ? 1 : 0);
+  return { lines: lines, unit: unit, qty: c.qty, discPct: discPct, disc: disc, sub: sub, ship: ship, total: sub + ship, weeks: weeks };
+}
+function dims(c) {
+  var h = Math.round(c.seatH - 13 + 56 * Math.cos(0.1));
+  var kg = 4.2 + (c.wood === 'walnut' ? 0.3 : 0) + (c.legs === 'sled' ? 0.8 : c.legs === 'hairpin' ? -0.4 : 0) +
+    (c.arms === 'wood' ? 1.1 : 0) + (c.back === 'uph' ? 0.5 : c.back === 'spindle' ? 0.2 : 0) + (c.fabric === 'leather' ? 0.6 : 0) + (c.width - 50) * 0.04;
+  return { w: c.width, d: c.arms === 'wood' ? 52 : 50, h: h, sh: c.seatH, kg: Math.round(kg * 10) / 10 };
+}
+function code(c) { return 'MRN1-' + KEYS.map(function (k) { return c[k]; }).join('-'); }
+function parseCode(t) {
+  var p = String(t || '').trim().split('-');
+  if (p.length !== 11 || p[0] !== 'MRN1') return null;
+  var o = {}; KEYS.forEach(function (k, i) { o[k] = p[i + 1]; });
+  return sanitize(o);
+}
+
+/* ---------- State ---------- */
+var cfg = Object.assign({}, DEFAULT), saved = [];
+function loadStore() {
+  try {
+    var r = JSON.parse(localStorage.getItem(STORE) || 'null');
+    if (r) {
+      var c = sanitize(r.cfg); if (c) cfg = c;
+      if (Array.isArray(r.saved)) saved = r.saved.map(function (s) { var cc = sanitize(s && s.cfg); return cc && typeof s.name === 'string' ? { id: String(s.id || Math.random()), name: s.name.slice(0, 40), cfg: cc } : null; }).filter(Boolean).slice(0, 12);
+    }
+  } catch (e) {}
+}
+function persist() { try { localStorage.setItem(STORE, JSON.stringify({ cfg: cfg, saved: saved })); } catch (e) {} }
+
+/* ---------- UI ---------- */
+var toastTimer;
+function toast(t) { var el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toastTimer); toastTimer = setTimeout(function () { el.classList.remove('on'); }, 2200); }
+function copyText(t, msg) {
+  function fallback() {
+    var ta = document.createElement('textarea'); ta.value = t; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+    document.body.appendChild(ta); ta.select();
+    var ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta); toast(ok ? msg : 'Copy is blocked here. Select the text and copy it by hand.');
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(function () { toast(msg); }, fallback); else fallback();
+}
+function mk(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
+function setKey(key, val) { cfg[key] = val; changed(); }
+
+function woodSwatchCss(o) { return 'background:repeating-linear-gradient(98deg,' + o.base + ' 0 3px,' + o.dark + ' 3px 4px,' + o.base + ' 4px 9px)'; }
+function buildControls() {
+  var segs = { legs: '#g-legs', metal: '#g-metal', back: '#g-back', arms: '#g-arms', fabric: '#g-fabric' };
+  Object.keys(segs).forEach(function (k) {
+    var host = $(segs[k]);
+    OPTS[k].forEach(function (o) {
+      var b = mk('button', 'seg-btn', '<span class="n">' + o.name + '</span>' + (o.price ? '<span class="d">' + delta(o.price) + '</span>' : ''));
+      b.type = 'button'; b.dataset.key = k; b.dataset.id = o.id;
+      b.addEventListener('click', function () { setKey(k, o.id); });
+      host.appendChild(b);
+    });
+  });
+  OPTS.wood.forEach(function (o) {
+    var b = mk('button', 'sw'); b.type = 'button'; b.dataset.key = 'wood'; b.dataset.id = o.id;
+    b.setAttribute('style', woodSwatchCss(o)); b.title = o.name + (o.price ? ' (' + delta(o.price) + ')' : ''); b.setAttribute('aria-label', b.title);
+    b.addEventListener('click', function () { setKey('wood', o.id); }); $('#g-wood').appendChild(b);
+  });
+  OPTS.color.forEach(function (o) {
+    var b = mk('button', 'sw'); b.type = 'button'; b.dataset.key = 'color'; b.dataset.id = o.id;
+    b.style.background = o.hex; b.title = o.name; b.setAttribute('aria-label', o.name);
+    b.addEventListener('click', function () { setKey('color', o.id); }); $('#g-color').appendChild(b);
+  });
+  ['width', 'seatH'].forEach(function (k) { $('#' + k).addEventListener('input', function (e) { setKey(k, Number(e.target.value)); }); });
+  $('#qty-dec').addEventListener('click', function () { setKey('qty', clamp(cfg.qty - 1, 1, 24)); });
+  $('#qty-inc').addEventListener('click', function () { setKey('qty', clamp(cfg.qty + 1, 1, 24)); });
+  $('#reset').addEventListener('click', function () { cfg = Object.assign({}, DEFAULT); changed(); toast('Back to the starting build'); });
+  $('#rand').addEventListener('click', function () {
+    var pick = function (l) { return l[Math.floor(Math.random() * l.length)].id; };
+    cfg = { wood: pick(OPTS.wood), legs: pick(OPTS.legs), metal: pick(OPTS.metal), back: pick(OPTS.back), arms: pick(OPTS.arms), fabric: pick(OPTS.fabric), color: pick(OPTS.color),
+      width: 46 + Math.floor(Math.random() * 11), seatH: 43 + Math.floor(Math.random() * 7), qty: cfg.qty };
+    changed();
+  });
+}
+
+function syncUI() {
+  $$('[data-key]').forEach(function (b) { b.setAttribute('aria-pressed', String(String(cfg[b.dataset.key]) === b.dataset.id)); });
+  var wood = byId(OPTS.wood, cfg.wood), legs = byId(OPTS.legs, cfg.legs), metal = byId(OPTS.metal, cfg.metal), back = byId(OPTS.back, cfg.back),
+    arms = byId(OPTS.arms, cfg.arms), fab = byId(OPTS.fabric, cfg.fabric), col = byId(OPTS.color, cfg.color);
+  $('#v-wood').textContent = wood.name + (wood.price ? ' ' + delta(wood.price) : '');
+  $('#v-legs').textContent = legs.name + (legs.price ? ' ' + delta(legs.price) : '');
+  $('#v-metal').textContent = metal.name + (metal.price ? ' ' + delta(metal.price) : '');
+  $('#v-back').textContent = back.name + (back.price ? ' ' + delta(back.price) : '');
+  $('#v-arms').textContent = arms.name + (arms.price ? ' ' + delta(arms.price) : '');
+  $('#v-fabric').textContent = fab.name + (fab.price ? ' ' + delta(fab.price) : '');
+  $('#v-color').textContent = col.name;
+  $('#grp-metal').hidden = !legs.metal;
+  $('#width').value = cfg.width; $('#v-width').textContent = cfg.width + ' cm';
+  $('#seatH').value = cfg.seatH; $('#v-seatH').textContent = cfg.seatH + ' cm';
+  $('#qty').textContent = cfg.qty;
+  $('#qty-note').textContent = cfg.qty >= 8 ? '10% off for 8 or more' : cfg.qty >= 4 ? '5% off. 10% off at 8 chairs' : '5% off at 4 chairs, 10% at 8';
+  var q = quote(cfg), d = dims(cfg);
+  $('#total').textContent = usd(q.total);
+  $('#price-sub').textContent = usd(q.unit) + ' each' + (cfg.qty > 1 ? ' × ' + cfg.qty : '') + (q.ship ? ' + ' + usd(q.ship) + ' delivery' : ' · free delivery');
+  $('#weeks').textContent = q.weeks + ' weeks';
+  $('#dims').innerHTML = '<span>W <b>' + d.w + '</b></span><span>D <b>' + d.d + '</b></span><span>H <b>' + d.h + '</b></span><span>Seat <b>' + d.sh + '</b></span><span>cm · about <b>' + d.kg + '</b> kg</span>';
+  $('#code-out').value = code(cfg);
+  var desc = wood.name + ' frame, ' + legs.name.toLowerCase() + ' legs' + (legs.metal ? ' in ' + metal.name.toLowerCase() : '') + ', ' + back.name.toLowerCase() + ' back, ' + arms.name.toLowerCase() + ', ' + col.name.toLowerCase() + ' ' + fab.name.toLowerCase();
+  $('#gl').setAttribute('aria-label', '3D model of the Marren chair: ' + desc);
+}
+
+/* Tabs */
+function selectTab(name, focus) {
+  ['build', 'saved', 'share'].forEach(function (n) {
+    var on = n === name, t = $('#tab-' + n);
+    t.setAttribute('aria-selected', String(on)); t.tabIndex = on ? 0 : -1; $('#pane-' + n).hidden = !on;
+    if (on && focus) t.focus();
+  });
+  var p = $('.panes'); if (p) p.scrollTop = 0;
+}
+$$('.tab').forEach(function (t) {
+  t.addEventListener('click', function () { selectTab(t.id.replace('tab-', '')); });
+  t.addEventListener('keydown', function (e) {
+    var names = ['build', 'saved', 'share'], i = names.indexOf(t.id.replace('tab-', ''));
+    if (e.key === 'ArrowRight') { e.preventDefault(); selectTab(names[(i + 1) % 3], true); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); selectTab(names[(i + 2) % 3], true); }
+  });
+});
+
+/* Saved designs */
+var confirmId = null, confirmTimer;
+function renderSaved() {
+  var ul = $('#saved-list'); ul.innerHTML = ''; $('#saved-count').textContent = saved.length;
+  if (!saved.length) { ul.appendChild(mk('li', 'empty', 'No saved designs yet. Name the chair you have built and press Save.')); ul.firstChild.style.display = 'block'; return; }
+  saved.forEach(function (s) {
+    var q = quote(s.cfg), li = mk('li');
+    var dots = mk('div', 'dots'); var a = mk('i'), b = mk('i');
+    a.setAttribute('style', woodSwatchCss(byId(OPTS.wood, s.cfg.wood))); b.style.background = byId(OPTS.color, s.cfg.color).hex; dots.appendChild(a); dots.appendChild(b);
+    var info = mk('div'); var nm = mk('div', 'nm'); nm.textContent = s.name;
+    info.appendChild(nm); info.appendChild(mk('div', 'meta', usd(q.unit) + ' each · ' + s.cfg.width + ' cm · ' + byId(OPTS.legs, s.cfg.legs).name.toLowerCase()));
+    var acts = mk('div', 'acts');
+    var load = mk('button', 'btn', 'Load'); load.type = 'button';
+    load.addEventListener('click', function () { cfg = Object.assign({}, s.cfg); changed(); selectTab('build'); toast('Loaded ' + s.name); });
+    var del = mk('button', 'btn' + (confirmId === s.id ? ' danger' : ''), confirmId === s.id ? 'Delete?' : 'Delete'); del.type = 'button';
+    del.addEventListener('click', function () {
+      if (confirmId === s.id) { saved = saved.filter(function (x) { return x.id !== s.id; }); confirmId = null; persist(); renderSaved(); toast('Deleted'); }
+      else { confirmId = s.id; renderSaved(); clearTimeout(confirmTimer); confirmTimer = setTimeout(function () { confirmId = null; renderSaved(); }, 3000); }
+    });
+    acts.appendChild(load); acts.appendChild(del);
+    li.appendChild(dots); li.appendChild(info); li.appendChild(acts); ul.appendChild(li);
+  });
+}
+$('#save').addEventListener('click', function () {
+  if (saved.length >= 12) { toast('You can keep 12 designs. Delete one first.'); return; }
+  var inp = $('#save-name'), name = inp.value.trim() || 'Design ' + (saved.length + 1);
+  saved.unshift({ id: String(Date.now()) + Math.random().toString(36).slice(2, 6), name: name.slice(0, 40), cfg: Object.assign({}, cfg) });
+  inp.value = ''; persist(); renderSaved(); toast('Saved ' + name);
+});
+$('#save-name').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('#save').click(); });
+
+/* Share */
+function specSheet(c) {
+  var q = quote(c), d = dims(c), g = function (k) { return byId(OPTS[k], c[k]); };
+  return ['MARREN CHAIR – Halden Workshop', 'Design code: ' + code(c), '',
+    'Frame: ' + g('wood').name, 'Legs: ' + g('legs').name + (g('legs').metal ? ', ' + g('metal').name : ''), 'Back: ' + g('back').name, 'Arms: ' + g('arms').name,
+    'Upholstery: ' + g('color').name + ' ' + g('fabric').name.toLowerCase(), 'Size: W ' + d.w + ' x D ' + d.d + ' x H ' + d.h + ' cm, seat ' + d.sh + ' cm, about ' + d.kg + ' kg',
+    'Quantity: ' + c.qty, 'Price: ' + usd2.format(q.unit) + ' each, ' + usd2.format(q.total) + ' total', 'Ready in about ' + q.weeks + ' weeks'].join('\n');
+}
+$('#copy-code').addEventListener('click', function () { copyText(code(cfg), 'Design code copied'); });
+$('#copy-spec').addEventListener('click', function () { copyText(specSheet(cfg), 'Spec sheet copied'); });
+$('#load-code').addEventListener('click', function () {
+  var c = parseCode($('#code-in').value), err = $('#code-err');
+  if (!c) { err.textContent = 'That code was not recognised. It should start with MRN1 and have ten parts separated by dashes.'; return; }
+  err.textContent = ''; cfg = c; $('#code-in').value = ''; changed(); selectTab('build'); toast('Design loaded');
+});
+
+/* Order dialog */
+var lastFocus = null;
+function openOrder() {
+  var q = quote(cfg), t = $('#order-table'), rows = '';
+  q.lines.forEach(function (l) { rows += '<tr><td>' + l.label + (l.note ? '<br><span class="note">' + l.note + '</span>' : '') + '</td><td>' + (l.amt < 0 ? '−' : '') + usd(Math.abs(l.amt)) + '</td></tr>'; });
+  rows += '<tr class="sum"><td>Price per chair</td><td>' + usd(q.unit) + '</td></tr>';
+  rows += '<tr><td>Quantity</td><td>× ' + q.qty + '</td></tr>';
+  if (q.disc) rows += '<tr><td class="good">Volume discount (' + q.discPct + '%)</td><td class="good">−' + usd(q.disc) + '</td></tr>';
+  rows += '<tr><td>Delivery</td><td>' + (q.ship ? usd(q.ship) : 'Free') + '</td></tr>';
+  rows += '<tr class="total"><td>Total</td><td>' + usd(q.total) + '</td></tr>';
+  rows += '<tr><td colspan="2" class="note" style="text-align:left;font-family:var(--f-body)">Ready in about ' + q.weeks + ' weeks. Taxes are not included.</td></tr>';
+  t.innerHTML = rows;
+  $('#order-ref').textContent = code(cfg);
+  lastFocus = document.activeElement; $('#order').hidden = false; $('#order-close').focus();
+}
+function closeOrder() { $('#order').hidden = true; if (lastFocus && lastFocus.focus) lastFocus.focus(); }
+$('#review').addEventListener('click', openOrder);
+$('#order-close').addEventListener('click', closeOrder);
+$('#order').addEventListener('click', function (e) { if (e.target === this) closeOrder(); });
+document.addEventListener('keydown', function (e) {
+  if ($('#order').hidden) return;
+  if (e.key === 'Escape') closeOrder();
+  if (e.key === 'Tab') { var f = $$('#order button'); var first = f[0], last = f[f.length - 1]; if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); } else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); } }
+});
+$('#order-copy').addEventListener('click', function () {
+  copyText(specSheet(cfg) + '\nDelivery: ' + (quote(cfg).ship ? usd2.format(quote(cfg).ship) : 'Free') + '\nTaxes not included.', 'Order summary copied');
+});
+
+/* ---------- 3D scene ---------- */
+var S = null; // scene state
+var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+var texCache = {}, matCache = {};
+
+function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; var t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function woodTexture(spec, horizontal) {
+  var key = spec.id + (horizontal ? 'h' : 'v');
+  if (texCache[key]) return texCache[key];
+  var cv = document.createElement('canvas'); cv.width = cv.height = 512; var g = cv.getContext('2d'), r = rng(spec.id.length * 977 + spec.id.charCodeAt(0));
+  g.fillStyle = spec.base; g.fillRect(0, 0, 512, 512);
+  for (var i = 0; i < 26; i++) { g.fillStyle = spec.dark; g.globalAlpha = 0.04 + r() * 0.06; var x = r() * 512; g.fillRect(x, 0, 6 + r() * 34, 512); }
+  for (var j = 0; j < 190; j++) {
+    var x0 = r() * 512, amp = 1 + r() * 5, fr = 0.006 + r() * 0.02, ph = r() * 6.28;
+    g.strokeStyle = spec.dark; g.globalAlpha = 0.07 + r() * 0.22; g.lineWidth = 0.5 + r() * 1.7; g.beginPath();
+    for (var y = 0; y <= 512; y += 8) { var xx = x0 + Math.sin(y * fr + ph) * amp; if (y === 0) g.moveTo(xx, y); else g.lineTo(xx, y); }
+    g.stroke();
+  }
+  g.globalAlpha = 1;
+  var t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.encoding = THREE.sRGBEncoding; t.anisotropy = 4;
+  if (horizontal) { t.center.set(0.5, 0.5); t.rotation = Math.PI / 2; }
+  return (texCache[key] = t);
+}
+function noiseTexture(size, scale, seed) {
+  var key = 'n' + size + seed; if (texCache[key]) return texCache[key];
+  var cv = document.createElement('canvas'); cv.width = cv.height = size; var g = cv.getContext('2d'), r = rng(seed), id = g.createImageData(size, size);
+  for (var i = 0; i < id.data.length; i += 4) { var v = 128 + (r() - 0.5) * 120; id.data[i] = id.data[i + 1] = id.data[i + 2] = v; id.data[i + 3] = 255; }
+  g.putImageData(id, 0, 0);
+  var t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(scale, scale); return (texCache[key] = t);
+}
+function woodMat(horizontal) {
+  var o = byId(OPTS.wood, cfg.wood), key = 'w' + o.id + (horizontal ? 'h' : 'v');
+  return matCache[key] || (matCache[key] = new THREE.MeshStandardMaterial({ map: woodTexture(o, horizontal), roughness: 0.62, metalness: 0 }));
+}
+function metalMat() {
+  var o = byId(OPTS.metal, cfg.metal), key = 'm' + o.id;
+  return matCache[key] || (matCache[key] = new THREE.MeshStandardMaterial({ color: o.color, roughness: o.rough, metalness: o.metalness }));
+}
+function fabricMat() {
+  var f = byId(OPTS.fabric, cfg.fabric), c = byId(OPTS.color, cfg.color), key = 'f' + f.id + c.id;
+  if (matCache[key]) return matCache[key];
+  var m;
+  if (f.kind === 'velvet') { m = new THREE.MeshPhysicalMaterial({ color: c.hex, roughness: 0.9, sheen: 0.6, sheenRoughness: 0.5, sheenColor: new THREE.Color(c.hex).lerp(new THREE.Color('#ffffff'), 0.25) }); }
+  else if (f.kind === 'leather') { m = new THREE.MeshPhysicalMaterial({ color: c.hex, roughness: 0.46, clearcoat: 0.3, clearcoatRoughness: 0.5, bumpMap: noiseTexture(128, 10, 5), bumpScale: 0.35 }); }
+  else { m = new THREE.MeshStandardMaterial({ color: c.hex, roughness: 1, bumpMap: noiseTexture(128, 7, 9), bumpScale: 0.22 }); }
+  return (matCache[key] = m);
+}
+
+function mesh(geo, mat) { var m = new THREE.Mesh(geo, mat); m.castShadow = true; m.receiveShadow = true; return m; }
+function box(w, h, d, mat, x, y, z) { var m = mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); return m; }
+function rod(a, b, r, mat) {
+  var dir = new THREE.Vector3().subVectors(b, a), len = dir.length();
+  var m = mesh(new THREE.CylinderGeometry(r, r, len, 14), mat);
+  m.position.copy(a).addScaledVector(dir, 0.5); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize()); return m;
+}
+function rrShape(w, h, r) {
+  var s = new THREE.Shape(), x = -w / 2, y = -h / 2;
+  s.moveTo(x + r, y); s.lineTo(x + w - r, y); s.quadraticCurveTo(x + w, y, x + w, y + r); s.lineTo(x + w, y + h - r); s.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  s.lineTo(x + r, y + h); s.quadraticCurveTo(x, y + h, x, y + h - r); s.lineTo(x, y + r); s.quadraticCurveTo(x, y, x + r, y); return s;
+}
+function padGeo(w, h, depth, bevel, r) {
+  var g = new THREE.ExtrudeGeometry(rrShape(w - 2 * bevel, h - 2 * bevel, r), { depth: depth - 2 * bevel, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 4, curveSegments: 8 });
+  g.translate(0, 0, -(depth - 2 * bevel) / 2); return g;
+}
+function roundedPath(pts, rc) {
+  var path = new THREE.CurvePath(), prev = pts[0].clone();
+  for (var i = 1; i < pts.length - 1; i++) {
+    var p = pts[i], d1 = new THREE.Vector3().subVectors(pts[i - 1], p).normalize(), d2 = new THREE.Vector3().subVectors(pts[i + 1], p).normalize();
+    var s = p.clone().addScaledVector(d1, rc), e = p.clone().addScaledVector(d2, rc);
+    path.add(new THREE.LineCurve3(prev, s)); path.add(new THREE.QuadraticBezierCurve3(s, p.clone(), e)); prev = e;
+  }
+  path.add(new THREE.LineCurve3(prev, pts[pts.length - 1])); return path;
+}
+
+function buildChair() {
+  var W = cfg.width / 100, D = cfg.arms === 'wood' ? 0.52 : 0.50, SH = cfg.seatH / 100;
+  var g = new THREE.Group(), V = woodMat(false), H = woodMat(true), F = fabricMat(), M = metalMat();
+  var topY = SH - 0.10, aprY = SH - 0.10, tilt = -0.1, y0 = SH - 0.13, L = 0.56;
+
+  // seat cushion
+  var hasArms = cfg.arms === 'wood', cw = hasArms ? W - 0.11 : W - 0.02;
+  var cg = padGeo(cw, D - 0.02, 0.075, 0.014, 0.045); cg.rotateX(-Math.PI / 2);
+  var cushion = mesh(cg, F); cushion.position.set(0, SH - 0.0375, 0); g.add(cushion);
+
+  // apron
+  g.add(box(W - 0.06, 0.06, 0.025, H, 0, aprY, D / 2 - 0.03));
+  g.add(box(W - 0.06, 0.06, 0.025, H, 0, aprY, -(D / 2 - 0.03)));
+  g.add(box(0.025, 0.06, D - 0.05, V, W / 2 - 0.025, aprY, 0));
+  g.add(box(0.025, 0.06, D - 0.05, V, -(W / 2 - 0.025), aprY, 0));
+
+  // legs
+  var lx = W / 2 - 0.04, lz = D / 2 - 0.045, sx, sz;
+  if (cfg.legs === 'tapered') {
+    for (sx = -1; sx <= 1; sx += 2) for (sz = -1; sz <= 1; sz += 2) {
+      var leg = mesh(new THREE.CylinderGeometry(0.021, 0.011, topY, 24), V); leg.position.set(sx * lx, topY / 2, sz * lz); g.add(leg);
+    }
+  } else if (cfg.legs === 'hairpin') {
+    for (sx = -1; sx <= 1; sx += 2) {
+      for (sz = -1; sz <= 1; sz += 2) {
+        var top = new THREE.Vector3(sx * (W / 2 - 0.055), topY, sz * (D / 2 - 0.07)), bot = new THREE.Vector3(sx * (W / 2 - 0.055 + 0.075), 0.006, sz * (D / 2 - 0.07 + 0.05));
+        g.add(rod(top, bot, 0.0065, M));
+      }
+      var plate = box(0.03, 0.008, D - 0.12, M, sx * (W / 2 - 0.055), topY + 0.003, 0); g.add(plate);
+    }
+  } else {
+    var zr = -(D / 2 - 0.075), zf = D / 2 - 0.075;
+    for (sx = -1; sx <= 1; sx += 2) {
+      var x = sx * (W / 2 - 0.055), r = 0.0085;
+      var path = roundedPath([new THREE.Vector3(x, topY + 0.01, zr), new THREE.Vector3(x, r, zr), new THREE.Vector3(x, r, zf), new THREE.Vector3(x, topY + 0.01, zf)], 0.06);
+      g.add(mesh(new THREE.TubeGeometry(path, 80, r, 12, false), M));
+    }
+  }
+
+  // back frame (tilted)
+  var bf = new THREE.Group(); bf.position.set(0, y0, -(D / 2 - 0.03)); bf.rotation.x = tilt; g.add(bf);
+  var px = W / 2 - 0.022;
+  bf.add(box(0.034, L, 0.034, V, px, L / 2, 0)); bf.add(box(0.034, L, 0.034, V, -px, L / 2, 0));
+  var iw = 2 * px - 0.034 - 0.004;
+  if (cfg.back === 'slat') {
+    [0.31, 0.405, 0.50].forEach(function (y) { bf.add(box(iw, 0.075, 0.016, H, 0, y, 0.002)); });
+  } else if (cfg.back === 'spindle') {
+    bf.add(box(iw, 0.05, 0.026, H, 0, 0.53, 0)); bf.add(box(iw, 0.04, 0.022, H, 0, 0.24, 0));
+    var n = 7;
+    for (var i = 0; i < n; i++) { var s = mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.255, 12), V); s.position.set(-iw / 2 + 0.03 + (iw - 0.06) * i / (n - 1), 0.38, 0); bf.add(s); }
+  } else {
+    var pg = padGeo(iw - 0.01, 0.255, 0.05, 0.016, 0.05); var panel = mesh(pg, F); panel.position.set(0, 0.40, 0.004); bf.add(panel);
+  }
+
+  // arms
+  if (hasArms) {
+    var armY = SH + 0.20, zFront = D / 2 - 0.06, yl = (armY - y0) / Math.cos(tilt), zRear = -(D / 2 - 0.03) + yl * Math.sin(tilt);
+    for (sx = -1; sx <= 1; sx += 2) {
+      var ax = sx * px, len = zFront - zRear + 0.02;
+      g.add(box(0.05, 0.026, len, H, ax, armY, (zFront + zRear) / 2 + 0.01));
+      var ph = armY - 0.013 - y0; g.add(box(0.032, ph, 0.032, V, ax, y0 + ph / 2, zFront - 0.005));
+    }
+  }
+  g.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  return g;
+}
+
+function disposeGroup(g) { g.traverse(function (o) { if (o.isMesh && o.geometry) o.geometry.dispose(); }); }
+function rebuild3D() {
+  if (!S) return;
+  if (S.chair) { S.scene.remove(S.chair); disposeGroup(S.chair); }
+  S.chair = buildChair(); S.scene.add(S.chair); S.dirty = true;
+}
+
+var VIEWS = { three: [1.4, 0.98, 1.8], front: [0, 0.62, 2.9], side: [2.9, 0.62, 0], top: [0.001, 3.3, 0.02] };
+function flyTo(name) {
+  if (!S) return;
+  var p = VIEWS[name], dur = reduceMotion ? 1 : 650;
+  S.tween = { t0: performance.now(), dur: dur, p0: S.camera.position.clone(), p1: new THREE.Vector3(p[0], p[1], p[2]) };
+  S.controls.autoRotate = false; setSpin(false);
+  $$('#views [data-view]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.view === name)); });
+}
+function setSpin(on) { if (S) S.controls.autoRotate = on; $('#spin').setAttribute('aria-pressed', String(on)); }
+
+function initScene() {
+  if (!window.THREE || !THREE.OrbitControls) throw new Error('Three.js did not load');
+  if (THREE.ColorManagement) THREE.ColorManagement.legacyMode = false;
+  var canvas = $('#gl'), stage = $('#stage');
+  var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.outputEncoding = THREE.sRGBEncoding; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.82;
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.setClearColor(0x000000, 0);
+  var scene = new THREE.Scene();
+  if (THREE.RoomEnvironment) { var pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromScene(new THREE.RoomEnvironment(), 0.04).texture; pm.dispose(); }
+  var camera = new THREE.PerspectiveCamera(30, 1, 0.1, 30); camera.position.set(VIEWS.three[0], VIEWS.three[1], VIEWS.three[2]);
+  var key = new THREE.DirectionalLight(0xfff3e4, 1.3); key.position.set(2.2, 4, 2.4); key.castShadow = true;
+  key.shadow.mapSize.set(2048, 2048); key.shadow.camera.left = -1.1; key.shadow.camera.right = 1.1; key.shadow.camera.top = 1.1; key.shadow.camera.bottom = -1.1;
+  key.shadow.camera.near = 1; key.shadow.camera.far = 9; key.shadow.radius = 5; key.shadow.bias = -0.0004; scene.add(key);
+  var rim = new THREE.DirectionalLight(0xdfe8ff, 0.6); rim.position.set(-3, 2, -2.5); scene.add(rim);
+  var floor = new THREE.Mesh(new THREE.PlaneGeometry(8, 8), new THREE.ShadowMaterial({ opacity: 0.28 })); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+  var controls = new THREE.OrbitControls(camera, canvas);
+  controls.target.set(0, 0.45, 0); controls.enablePan = false; controls.enableDamping = true; controls.dampingFactor = 0.08;
+  controls.minDistance = 1.3; controls.maxDistance = 4.4; controls.maxPolarAngle = Math.PI / 2 - 0.03; controls.autoRotateSpeed = 1.6; controls.update();
+  S = { renderer: renderer, scene: scene, camera: camera, controls: controls, chair: null, tween: null, dirty: true, w: 0, h: 0 };
+  controls.addEventListener('change', function () { S.dirty = true; });
+  function resize() {
+    var w = stage.clientWidth, h = stage.clientHeight; if (!w || !h) return;
+    if (w === S.w && h === S.h) return; S.w = w; S.h = h;
+    renderer.setSize(w, h, false); camera.aspect = w / h;
+    camera.fov = w / h < 0.9 ? 40 : 30; camera.updateProjectionMatrix(); S.dirty = true;
+  }
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(stage); window.addEventListener('resize', resize); resize();
+  canvas.addEventListener('pointerdown', function () { S.tween = null; if (controls.autoRotate) setSpin(false); $$('#views [data-view]').forEach(function (b) { b.setAttribute('aria-pressed', 'false'); }); });
+  function frame(now) {
+    requestAnimationFrame(frame);
+    if (S.tween) {
+      var k = Math.min(1, (now - S.tween.t0) / S.tween.dur), e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+      camera.position.lerpVectors(S.tween.p0, S.tween.p1, e); if (k >= 1) S.tween = null; S.dirty = true;
+    }
+    var moved = controls.update();
+    if (moved || S.dirty) { renderer.render(scene, camera); S.dirty = false; }
+  }
+  requestAnimationFrame(frame);
+}
+
+/* ---------- Wiring ---------- */
+function changed() { persist(); syncUI(); rebuild3D(); }
+$$('#views [data-view]').forEach(function (b) { b.addEventListener('click', function () { flyTo(b.dataset.view); }); });
+$('#spin').addEventListener('click', function () { if (!S) return; var on = !S.controls.autoRotate; setSpin(on); if (on) $$('#views [data-view]').forEach(function (b) { b.setAttribute('aria-pressed', 'false'); }); });
+
+loadStore(); buildControls(); renderSaved(); syncUI();
+try { initScene(); rebuild3D(); }
+catch (err) { S = null; $('#fallback').hidden = false; $('#gl').hidden = true; if (window.console) console.warn('3D preview unavailable:', err && err.message); }
+window.__marren = { get cfg() { return cfg; }, quote: quote, code: code, parseCode: parseCode, ready: function () { return !!S; } };
+})();
+</script>
+
+</body>
+</html>
